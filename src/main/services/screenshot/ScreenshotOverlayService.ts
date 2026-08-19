@@ -219,7 +219,14 @@ export class ScreenshotOverlayService extends BaseService {
         // Which overlay covers which display, for the snap-target push below.
         const snapOverlays: { windowId: WindowId; display: Display }[] = []
 
-        for (const display of displays) {
+        // The pool hands its one pre-warmed window to the first open(), and the cursor's
+        // display is the overlay the user is actually looking at; any other order leaves
+        // it to a cold renderer that takes seconds to paint.
+        const orderedDisplays = [...displays].sort(
+          (a, b) => Number(b.id === cursorDisplay.id) - Number(a.id === cursorDisplay.id)
+        )
+
+        for (const display of orderedDisplays) {
           const captureResult = matchCapture(display, captures, monitorInfoList, primaryScaleFactor)
           if (!captureResult) {
             logger.warn('No capture matched a display; it gets no overlay', {

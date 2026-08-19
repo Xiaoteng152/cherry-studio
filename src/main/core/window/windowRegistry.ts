@@ -585,17 +585,21 @@ export const WINDOW_TYPE_REGISTRY: Partial<Record<WindowType, WindowTypeMetadata
       reapplyAlwaysOnTop: true
     },
     poolConfig: {
-      // No standby: capture sessions are user-initiated and bursty, and a permanently
-      // warm overlay would hold a transparent window per display for nothing.
-      standbySize: 0,
+      // One resident spare, because a cold overlay renderer needs seconds to decode and
+      // paint its capture — far past REVEAL_FALLBACK_MS, so the fallback became the normal
+      // path and revealed a window that had not drawn anything. The capture path opens the
+      // cursor's display first, so this spare is the overlay the user is looking at.
+      standbySize: 1,
       // A capture session opens one window per display; 4 covers realistic setups.
       recycleMaxSize: 4,
       // No decay: a display count does not drift, so shedding one window a minute only
       // guarantees that the next capture is cold again. The buffer is kept whole and
-      // released whole, 10 minutes after the last capture.
+      // trimmed back to the standby spare 10 minutes after the last capture.
       decayInterval: 0,
       inactivityTimeout: 600,
-      warmup: 'lazy'
+      // Pre-created at startup, so even the FIRST capture of a run is warm. Skipped while
+      // the pool is suspended, which is how a disabled screenshot feature stays free.
+      warmup: 'eager'
     }
   }
 }
